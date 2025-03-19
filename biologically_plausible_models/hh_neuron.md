@@ -18,11 +18,45 @@ jupyter:
 
 
 
+
+## Import libraries
+We first need to import our required libraries. We will be using two libraries, NumPy and MatPlotLib.
+
++ **NumPy** - Used for creating and manipulating high-performance arrays/matrices, also provides a number of mathematical functions.
++ **MatPlotLib** - Allows us create graphs and figures from our data.
+
+We will give NumPy the alias `np` for readibility.
+
+From MatPlotLib we will only import the module `pyplot`, giving it the alias `plt`.
+
 ```python
 import numpy as np
+from matplotlib import pyplot as plt
 ```
 
 ## Defining program parameters
+
+
+First we will define our time-related parameters:
+
+| Name      | Description                                | Units |
+| --------- | ------------------------------------------ | ----- |
+| `n_iter`  | The total number of iterations             | n/a   |
+| `t_max`   | The final time point                       | ms    |
+| `t_range` | Array containing all time points           | n/a   |
+| `dt`      | The amount time increases by per iteration | ms    |
+
+NumPy's `linspace` function is used to generate an array of evenly spaced numbers. The start point, end point, and number of entries is provided, additionally an optional keyword argument `retstep` is used to return step between each entry.
+
+
+```python
+# dt should be 0.01 with these values
+n_iter = 10_000
+t_max = 100
+t_range, dt = np.linspace(0, t_max, n_iter, retstep=True)
+```
+
+
 
 ```python
 imp_cur = 0.9 # Input current?
@@ -40,16 +74,15 @@ cm = 0.01 # Membrane conductance
 ```
 
 ```python
-dt = 0.01
-t_max = 100
-t_range = np.arange(0, t_max, dt, dtype=float)
-iter_count = len(t_range)
-
 v = -64.9964
 m = 0.0530
 h = 0.5960
 n = 0.3177
+```
 
+
+
+```python
 na_g_hist = np.zeros([1, iter_count])
 na_k_hist = np.zeros([1, iter_count])
 v_hist = np.zeros([1, iter_count])
@@ -57,6 +90,8 @@ m_hist = np.zeros([1, iter_count])
 h_hist = np.zeros([1, iter_count])
 n_hist = np.zeros([1, iter_count])
 ```
+
+## Running the simulation
 
 ```python
 for i in range(iter_count):
