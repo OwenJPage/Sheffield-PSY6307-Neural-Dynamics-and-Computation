@@ -3,6 +3,6 @@
 .mypy_cache
 */.mypy_cache
 .vscode
-.intellij
+.idea
 .ruff_cache
 uv.lock
