@@ -1,13 +1,14 @@
-import jupytext
+import json
 import os
 from pathlib import Path
-import json
+import jupytext
 
-data_file = Path("./.nb_sync.json")
+data_path = Path("./.nb_sync.json")
 
-if data_file.exists() and data_file.is_file():
-    history: dict[str, float] = json.load(data_file)
-else:
+try:
+    with data_path.open("r") as data_file:
+        history: dict[str, float] = json.load(data_file)
+except BaseException:
     history = {}
 
 nb_root = Path("./notebooks")
@@ -16,15 +17,24 @@ md_root = Path("./markdown")
 
 
 def check_overwrite(file_path: Path) -> bool:
-    if file_path.exists() and history[file_path] != file_path.stat().st_mtime:
+    if (
+        file_path.exists()
+        and str(file_path) in history
+        and history[str(file_path)] != file_path.stat().st_mtime
+    ):
+        print(
+            f"E {file_path.exists()}, H {history.get(str(file_path))} S {file_path.stat().st_mtime}"
+        )
         while True:
-            match (
+            response = (
                 input(
-                    f"File {py_path.name} has been modified since last sync. Overwrite? (y/N):"
+                    f"File {file_path.name} has been modified since last sync. Overwrite? (y/N):"
                 )
                 .lower()
                 .strip()
-            ):
+            )
+
+            match response:
                 case "y":
                     return True
                 case "n" | "":
@@ -34,36 +44,46 @@ def check_overwrite(file_path: Path) -> bool:
 
 
 for root, dirs, files in os.walk(nb_root):
-    root_path = Path(root)
-    relative_path = root_path.relative_to(nb_root)
-
-    print(f"root: {relative_path}")
+    nb_dir = Path(root)
+    relative_path = nb_dir.relative_to(nb_root)
 
     # Skip any hidden folders
     if relative_path.name != "." and relative_path.name.startswith("."):
         print(f"Skipping `{root}`")
         continue
 
-    for file in [f for f in files if f.endswith(".ipynb")]:
-        print(f"file: {file}")
+    nb_files = [f for f in files if f.endswith(".ipynb")]
 
-        file_path = relative_path / file
+    py_dir = py_root / relative_path
+    md_dir = md_root / relative_path
 
-        nb_path = nb_root / file_path
-        py_path = (py_root / file_path).with_suffix(".py")
-        md_path = (md_root / file_path).with_suffix(".md")
+    if len(nb_files) > 0:
+        py_dir.mkdir(parents=True, exist_ok=True)
+        md_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in nb_files:
+        nb_path = nb_dir / file
+        py_path = (py_dir / file).with_suffix(".py")
+        md_path = (md_dir / file).with_suffix(".md")
+
+        print(f"Processing `{nb_path}`")
 
         nb_file = jupytext.read(nb_path, fmt="ipynb")
 
         if check_overwrite(py_path):
-            jupytext.write(nb_file, py_path, fmt="py:percent")
+            with py_path.open("w") as py_file:
+                jupytext.write(nb_file, py_file, fmt="py:percent")
 
-            history[py_path] = py_path.stat().st_mtime
+            history[str(py_path)] = py_path.stat().st_mtime
+            print(f"--> Written `{py_path}`")
 
         if check_overwrite(md_path):
-            jupytext.write(nb_file, md_path, fmt="md")
+            with md_path.open("w") as md_file:
+                jupytext.write(nb_file, md_file, fmt="md")
 
-            history[md_path] = md_path.stat().st_mtime
+            history[str(md_path)] = md_path.stat().st_mtime
+            print(f"--> Written `{md_path}`")
 
 
-json.dump(history, data_file)
+with data_path.open("w") as data_file:
+    json.dump(history, data_file)
